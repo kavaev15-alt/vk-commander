@@ -1,0 +1,4 @@
+.asset-head.text-head,.asset-row.text-row{grid-template-columns:29px minmax(115px,1fr) minmax(160px,2.5fr) 90px}
+.text-preview{font-size:10px;color:#596674;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.status-preview{font-size:11px;color:#4d5965;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.field textarea{width:100%;height:92px;resize:vertical;margin-top:5px;padding:7px;border:1px solid #bdc5cd;border-radius:2px;font:11px inherit;color:#3e4a57;line-height:1.4}
