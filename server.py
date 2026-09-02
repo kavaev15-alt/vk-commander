@@ -100,6 +100,10 @@ class Handler(SimpleHTTPRequestHandler):
         return item.value if item else None
 
     def do_GET(self):
+        # Always bust cache for index.html as well
+        if self.path == "/" or self.path.startswith("/?"):
+            self.path = "/index.html"
+
         path = urlparse(self.path)
         if path.path == "/api/health":
             return self.send_json(200, {"ok": True, "connected": bool(self.session() in sessions), "configured": bool(APP_ID and APP_SECRET and REDIRECT_URI)})
