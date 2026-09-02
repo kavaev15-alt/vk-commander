@@ -11,4 +11,28 @@
     <div class="divider"></div>
     <aside class="pane inspector"><header><b>Инспектор</b><button>•••</button></header><div id="empty" class="empty"><div>▧</div><b>Выберите сообщества</b><p>Выделите одну или несколько строк в таблице, чтобы посмотреть и изменить оформление.</p></div><div id="fields" class="fields hidden"><div class="picked"><b id="pickedCount">1 сообщество</b><button id="clear">×</button></div><section><h3>Тексты</h3><label>Описание <textarea id="description"></textarea></label><label>Статус <input id="status" type="text"></label></section><section><h3>Креативы</h3><label>Аватар <button class="file">＋ Выбрать изображение</button></label><label>Обложка <button class="file">＋ Выбрать изображение</button></label><label>Мобильная обложка <button class="file">＋ Выбрать изображение</button></label></section><section><h3>Применение</h3><label class="radio"><input checked name="apply" type="radio" value="selected"> К выбранным сообществам</label><label class="radio"><input name="apply" type="radio" value="all"> Ко всем сообществам в списке</label></section></div><footer class="inspector-footer"><button id="cancel">Отменить</button><button id="save">Сохранить</button></footer></aside>
   </div><footer class="status"><span><i></i> VK API: подключено</span><span>Последнее обновление: только что</span><span>Ctrl + Enter — применить изменения</span></footer>
-</main><div id="toast" class="toast hidden"></div><script src="main.js"></script><script src="vk-integration.js"></script><input type="file" id="filePicker" accept="image/*" class="hidden"></body></html>
+</main><div id="toast" class="toast hidden"></div>
+
+<div id="configModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Подключение к VK API</h2>
+    <p>Для работы программы необходимо создать приложение ВКонтакте.</p>
+    <ol>
+      <li>Перейдите на <a href="https://dev.vk.com/admin/apps-list" target="_blank">dev.vk.com</a> и создайте приложение (тип: <b>Standalone</b> или <b>Website</b>).</li>
+      <li>В настройках приложения укажите <b>Редирект URI</b> (базовый домен): <code>http://localhost:8000/auth/vk/callback</code></li>
+      <li>Скопируйте ID приложения и защищенный ключ и вставьте их ниже.</li>
+    </ol>
+    <label>ID приложения (App ID)
+      <input type="text" id="vkAppId" placeholder="Например: 51999999">
+    </label>
+    <label>Защищенный ключ (Secure Key / Client Secret)
+      <input type="password" id="vkAppSecret" placeholder="Вставьте секретный ключ">
+    </label>
+    <div class="modal-actions">
+      <button id="closeConfigModal">Отмена</button>
+      <button id="saveConfigModal" class="primary">Сохранить и войти</button>
+    </div>
+  </div>
+</div>
+
+<script src="main.js"></script><script src="vk-integration.js"></script><input type="file" id="filePicker" accept="image/*" class="hidden"></body></html>

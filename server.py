@@ -24,10 +24,17 @@ def load_local_config():
     return config
 
 
-local_config = load_local_config()
-APP_ID = os.getenv("VK_OAUTH_APP_ID", local_config.get("VK_OAUTH_APP_ID", ""))
-APP_SECRET = os.getenv("VK_OAUTH_CLIENT_SECRET", local_config.get("VK_OAUTH_CLIENT_SECRET", ""))
-REDIRECT_URI = os.getenv("VK_OAUTH_REDIRECT_URI", local_config.get("VK_OAUTH_REDIRECT_URI", ""))
+def update_globals():
+    global APP_ID, APP_SECRET, REDIRECT_URI
+    local_config = load_local_config()
+    APP_ID = os.getenv("VK_OAUTH_APP_ID", local_config.get("VK_OAUTH_APP_ID", ""))
+    APP_SECRET = os.getenv("VK_OAUTH_CLIENT_SECRET", local_config.get("VK_OAUTH_CLIENT_SECRET", ""))
+    REDIRECT_URI = os.getenv("VK_OAUTH_REDIRECT_URI", local_config.get("VK_OAUTH_REDIRECT_URI", ""))
+
+APP_ID = ""
+APP_SECRET = ""
+REDIRECT_URI = ""
+update_globals()
 API_VERSION = "5.199"
 sessions = {}
 
@@ -125,6 +132,24 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path)
+        if path.path == "/api/config":
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+                config = json.loads(body)
+                app_id = config.get("app_id", "").strip()
+                app_secret = config.get("app_secret", "").strip()
+                if not app_id or not app_secret:
+                    return self.send_json(400, {"error": "Не заполнены ID или секретный ключ приложения"})
+
+                env_content = f"VK_OAUTH_APP_ID={app_id}\nVK_OAUTH_CLIENT_SECRET={app_secret}\nVK_OAUTH_REDIRECT_URI=http://localhost:8000/auth/vk/callback\n"
+                (ROOT / ".env").write_text(env_content, encoding="utf-8")
+
+                update_globals()
+                return self.send_json(200, {"success": True})
+            except Exception as error:
+                return self.send_json(500, {"error": str(error)})
+
         if path.path == "/api/save":
             session = sessions.get(self.session(), {})
             if "token" not in session:

@@ -7,9 +7,7 @@ if (receiveButton) {
         response.json(),
       );
       if (!status.configured) {
-        showVkToast(
-          "Сначала нужно подключить отдельное OAuth-приложение VK. Я подготовлю этот шаг.",
-        );
+        document.getElementById("configModal").classList.remove("hidden");
         return;
       }
       window.location.assign("/auth/vk");
@@ -20,6 +18,31 @@ if (receiveButton) {
     }
   });
 }
+
+document.getElementById("closeConfigModal").onclick = () => {
+  document.getElementById("configModal").classList.add("hidden");
+};
+
+document.getElementById("saveConfigModal").onclick = async () => {
+  const appId = document.getElementById("vkAppId").value;
+  const appSecret = document.getElementById("vkAppSecret").value;
+  if (!appId || !appSecret) return showVkToast("Пожалуйста, заполните оба поля");
+
+  try {
+    const res = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ app_id: appId, app_secret: appSecret })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    document.getElementById("configModal").classList.add("hidden");
+    window.location.assign("/auth/vk");
+  } catch (e) {
+    showVkToast("Ошибка сохранения: " + e.message);
+  }
+};
 
 function showVkToast(message) {
   const toast = document.querySelector("#toast");
