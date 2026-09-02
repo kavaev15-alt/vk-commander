@@ -1,71 +1,105 @@
-const receiveButton = document.querySelector('.sync');
+const receiveButton = document.querySelector(".sync");
 if (receiveButton) {
-  receiveButton.title = 'Подключить VK и загрузить данные сообществ';
-  receiveButton.addEventListener('click', async () => {
+  receiveButton.title = "Подключить VK и загрузить данные сообществ";
+  receiveButton.addEventListener("click", async () => {
+    let isConfigured = false;
     try {
-      const status = await fetch('/api/health').then(response => response.json());
-      if (!status.configured) {
-        showVkToast('Сначала нужно подключить отдельное OAuth-приложение VK. Я подготовлю этот шаг.');
-        return;
-      }
-      window.location.assign('/auth/vk');
+      const status = await fetch(`${API_BASE}/api/health`).then((response) =>
+        response.json(),
+      );
+      isConfigured = status.configured;
     } catch {
-      showVkToast('Не удалось связаться с локальным сервером. Запусти программу заново.');
+      // Если сервер не запущен, всё равно показываем окно настроек
+      isConfigured = false;
+    }
+
+    if (!isConfigured) {
+      document.getElementById("configModal").classList.remove("hidden");
+      return;
+    }
+
+    try {
+      window.location.assign(`${API_BASE}/auth/vk`);
+    } catch {
+      showVkToast("Не удалось запустить авторизацию.");
     }
   });
 }
 
-function showVkToast(message) {
-  const toast = document.querySelector('#toast');
-  toast.textContent = message;
-  toast.classList.remove('hidden');
-  setTimeout(() => toast.classList.add('hidden'), 4500);
-}
+document.getElementById("closeConfigModal").onclick = () => {
+  document.getElementById("configModal").classList.add("hidden");
+};
 
-function updateRemoteThumbnails() {
-  document.querySelectorAll('.design-row').forEach(row => {
-    const group = data[Number(row.dataset.i)];
-    if (!group) return;
-    const [avatar, cover, mobile] = row.querySelectorAll('.thumb');
-    if (group[8]) avatar.style.cssText += `;background-image:url('${group[8]}');background-size:cover;background-position:center`;
-    if (group[9]) cover.style.cssText += `;background-image:url('${group[9]}');background-size:cover;background-position:center`;
-    if (group[10]) mobile.style.cssText += `;background-image:url('${group[10]}');background-size:cover;background-position:center`;
-  });
+document.getElementById("saveConfigModal").onclick = async () => {
+  const appId = document.getElementById("vkAppId").value;
+  const appSecret = document.getElementById("vkAppSecret").value;
+  if (!appId || !appSecret) return showVkToast("Пожалуйста, заполните оба поля");
+
+  try {
+    const res = await fetch(`${API_BASE}/api/config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ app_id: appId, app_secret: appSecret })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    document.getElementById("configModal").classList.add("hidden");
+    window.location.assign(`${API_BASE}/auth/vk`);
+  } catch (e) {
+    showVkToast("Не удалось подключиться. Убедитесь, что сервер запущен (кликните 'Запустить VK Commander.command')");
+  }
+};
+
+function showVkToast(message) {
+  const toast = document.querySelector("#toast");
+  toast.textContent = message;
+  toast.classList.remove("hidden");
+  setTimeout(() => toast.classList.add("hidden"), 4500);
 }
 
 async function loadVkGroups() {
-  const response = await fetch('/api/groups');
+  const response = await fetch(`${API_BASE}/api/groups`);
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Не удалось получить сообщества');
+  if (!response.ok)
+    throw new Error(result.error || "Не удалось получить сообщества");
   const groups = result.items || [];
-  data.splice(0, data.length, ...groups.map((group, index) => {
-    const cover = group.cover?.images?.[0]?.url || '';
-    return [
-      group.name,
-      String(group.members_count || 0),
-      group.name.slice(0, 1).toUpperCase(),
-      ['av-a','av-b','av-c','av-d','av-e','av-f'][index % 6],
-      ['cv-a','cv-b','cv-c','cv-d','cv-e','cv-f'][index % 6],
-      ['cv-f','cv-e','cv-d','cv-c','cv-b','cv-a'][index % 6],
-      group.description || 'Описание пока не заполнено',
-      typeof group.status === 'string' ? group.status : '—',
-      group.photo_200 || group.photo_100 || '', cover, cover
-    ];
-  }));
+  data.splice(
+    0,
+    data.length,
+    ...groups.map((group, index) => {
+      const cover = group.cover?.images?.[0]?.url || "";
+      return [
+        group.name,
+        String(group.members_count || 0),
+        group.name.slice(0, 1).toUpperCase(),
+        ["av-a", "av-b", "av-c", "av-d", "av-e", "av-f"][index % 6],
+        ["cv-a", "cv-b", "cv-c", "cv-d", "cv-e", "cv-f"][index % 6],
+        ["cv-f", "cv-e", "cv-d", "cv-c", "cv-b", "cv-a"][index % 6],
+        group.description || "Описание пока не заполнено",
+        typeof group.status === "string" ? group.status : "—",
+        group.photo_200 || group.photo_100 || "",
+        cover,
+        cover,
+        group.id, // index 11
+      ];
+    }),
+  );
   filtered.clear();
   selected.clear();
   groupRows();
   designRows();
   inspector();
-  updateRemoteThumbnails();
   showVkToast(`Загружено сообществ: ${groups.length}`);
 }
 
-fetch('/api/health')
-  .then(response => response.ok ? response.json() : null)
-  .then(async status => {
-    if (!status?.connected || !location.search.includes('connected=1')) return;
-    history.replaceState({}, '', '/');
+fetch(`${API_BASE}/api/health`)
+  .then((response) => (response.ok ? response.json() : null))
+  .then(async (status) => {
+    if (!status?.connected || !location.search.includes("connected=1")) return;
+    history.replaceState({}, "", "/");
     await loadVkGroups();
   })
-  .catch(error => { if (location.search.includes('connected=1')) showVkToast(error.message); });
+  .catch((error) => {
+    if (location.search.includes("connected=1")) showVkToast(error.message);
+  });
