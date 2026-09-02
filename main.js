@@ -180,6 +180,7 @@ function inspector() {
   setText("status", same(7), "Введите новый статус");
 
   tempImages = { avatar: null, cover: null, mobile: null };
+  textChanged = { description: false, status: false };
   const buttons = document.querySelectorAll(".file");
   if (buttons.length >= 3) {
     buttons[0].textContent = "＋ Выбрать изображение";
@@ -200,12 +201,16 @@ if (filePicker) {
   filePicker.onchange = (e) => {
     const file = e.target.files[0];
     if (file && currentUploadType) {
-      const url = URL.createObjectURL(file);
-      tempImages[currentUploadType] = url;
-      const buttons = document.querySelectorAll(".file");
-      if (currentUploadType === 'avatar' && buttons[0]) buttons[0].textContent = "✓ Изображение выбрано";
-      if (currentUploadType === 'cover' && buttons[1]) buttons[1].textContent = "✓ Изображение выбрано";
-      if (currentUploadType === 'mobile' && buttons[2]) buttons[2].textContent = "✓ Изображение выбрано";
+      const reader = new FileReader();
+      const type = currentUploadType; // Capture the current value
+      reader.onload = (e) => {
+        tempImages[type] = e.target.result;
+        const buttons = document.querySelectorAll(".file");
+        if (type === 'avatar' && buttons[0]) buttons[0].textContent = "✓ Изображение выбрано";
+        if (type === 'cover' && buttons[1]) buttons[1].textContent = "✓ Изображение выбрано";
+        if (type === 'mobile' && buttons[2]) buttons[2].textContent = "✓ Изображение выбрано";
+      };
+      reader.readAsDataURL(file);
     }
   };
 }
@@ -246,6 +251,37 @@ let textChanged = { description: false, status: false };
 document.querySelector("#description").addEventListener('input', () => textChanged.description = true);
 document.querySelector("#status").addEventListener('input', () => textChanged.status = true);
 
+document.querySelector(".send").onclick = async () => {
+  const updates = [];
+  data.forEach((groupData, i) => {
+    if (groupData[12]) {
+      const groupId = groupData[11] !== undefined ? groupData[11] : 10001 + i;
+      updates.push({ group_id: groupId, index: i, ...groupData[12] });
+    }
+  });
+
+  if (updates.length === 0) return toast("Нет локальных изменений для отправки в VK");
+
+  try {
+    const res = await fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || "Ошибка сохранения");
+
+    // Clear dirty flags
+    updates.forEach(u => {
+      delete data[u.index][12];
+    });
+
+    toast(`Изменения отправлены в VK для ${updates.length} ${plural(updates.length, "сообщества", "сообществ", "сообществ")}`);
+  } catch (e) {
+    toast("Ошибка: " + e.message);
+  }
+};
+
 document.querySelector("#save").onclick = () => {
   const applyAll = document.querySelector('input[name="apply"]:checked')?.value === 'all';
   const targetSet = applyAll ? (filtered.size ? filtered : new Set(data.map((_, i) => i))) : selected;
@@ -256,12 +292,27 @@ document.querySelector("#save").onclick = () => {
     s = document.querySelector("#status");
 
   targetSet.forEach((i) => {
-    if (textChanged.description) data[i][6] = d.value;
-    if (textChanged.status) data[i][7] = s.value;
-
-    if (tempImages.avatar) data[i][8] = tempImages.avatar;
-    if (tempImages.cover) data[i][9] = tempImages.cover;
-    if (tempImages.mobile) data[i][10] = tempImages.mobile;
+    data[i][12] = data[i][12] || {};
+    if (textChanged.description) {
+      data[i][6] = d.value;
+      data[i][12].description = d.value;
+    }
+    if (textChanged.status) {
+      data[i][7] = s.value;
+      data[i][12].status = s.value;
+    }
+    if (tempImages.avatar) {
+      data[i][8] = tempImages.avatar;
+      data[i][12].avatar = tempImages.avatar;
+    }
+    if (tempImages.cover) {
+      data[i][9] = tempImages.cover;
+      data[i][12].cover = tempImages.cover;
+    }
+    if (tempImages.mobile) {
+      data[i][10] = tempImages.mobile;
+      data[i][12].mobile = tempImages.mobile;
+    }
   });
 
   document.querySelector("#changes").textContent = "0";

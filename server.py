@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 import json
 import os
 import secrets
+import base64
 
 ROOT = Path(__file__).parent
 
@@ -38,6 +39,22 @@ def vk_request(method, params):
     if "error" in result:
         raise RuntimeError(result["error"].get("error_msg", "VK API error"))
     return result["response"]
+
+def post_multipart(url, file_data):
+    boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+    data = []
+    data.append(f"--{boundary}")
+    data.append('Content-Disposition: form-data; name="photo"; filename="photo.jpg"')
+    data.append("Content-Type: image/jpeg")
+    data.append("")
+
+    body = b"\r\n".join(x.encode() if isinstance(x, str) else x for x in data)
+    body += b"\r\n" + file_data + b"\r\n"
+    body += f"--{boundary}--\r\n".encode()
+
+    req = Request(url, data=body, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+    with urlopen(req, timeout=30) as response:
+        return json.loads(response.read())
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -105,6 +122,48 @@ class Handler(SimpleHTTPRequestHandler):
             except Exception as error:
                 return self.send_json(502, {"error": str(error)})
         return super().do_GET()
+
+    def do_POST(self):
+        path = urlparse(self.path)
+        if path.path == "/api/save":
+            session = sessions.get(self.session(), {})
+            if "token" not in session:
+                return self.send_json(401, {"error": "VK is not connected"})
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+                updates = json.loads(body)
+                results = []
+                for update in updates:
+                    group_id = update.get("group_id")
+                    if not group_id:
+                        continue
+                    if "description" in update:
+                        vk_request("groups.edit", {"access_token": session["token"], "group_id": group_id, "description": update["description"]})
+                    if "status" in update:
+                        vk_request("status.set", {"access_token": session["token"], "group_id": group_id, "text": update["status"]})
+
+                    if "avatar" in update and update["avatar"].startswith("data:image"):
+                        avatar_data = base64.b64decode(update["avatar"].split(",")[1])
+                        upload_info = vk_request("photos.getOwnerPhotoUploadServer", {"access_token": session["token"], "owner_id": -group_id})
+                        upload_res = post_multipart(upload_info["upload_url"], avatar_data)
+                        if "server" in upload_res and "photo" in upload_res and "hash" in upload_res:
+                            vk_request("photos.saveOwnerPhoto", {"access_token": session["token"], "server": upload_res["server"], "photo": upload_res["photo"], "hash": upload_res["hash"]})
+
+                    if "cover" in update and update["cover"].startswith("data:image"):
+                        cover_data = base64.b64decode(update["cover"].split(",")[1])
+                        upload_info = vk_request("photos.getOwnerCoverPhotoUploadServer", {"access_token": session["token"], "group_id": group_id, "crop_x": 0, "crop_y": 0, "crop_x2": 1590, "crop_y2": 400})
+                        upload_res = post_multipart(upload_info["upload_url"], cover_data)
+                        if "hash" in upload_res and "photo" in upload_res:
+                            vk_request("photos.saveOwnerCoverPhoto", {"access_token": session["token"], "hash": upload_res["hash"], "photo": upload_res["photo"]})
+
+                    results.append({"group_id": group_id, "status": "ok"})
+                return self.send_json(200, {"success": True, "results": results})
+            except Exception as error:
+                return self.send_json(500, {"error": str(error)})
+
+        self.send_response(404)
+        self.end_headers()
 
 if __name__ == "__main__":
     print("VK Commander: http://localhost:8000")

@@ -51,6 +51,7 @@ async function loadVkGroups() {
         group.photo_200 || group.photo_100 || "",
         cover,
         cover,
+        group.id, // index 11
       ];
     }),
   );
