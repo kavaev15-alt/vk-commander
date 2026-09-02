@@ -25,3 +25,10 @@
 .modal-actions button { padding: 8px 16px; border: 1px solid #c9ced5; border-radius: 4px; background: #ffffff; cursor: pointer; color: #333333; }
 .modal-actions button.primary { background: #0077ff; color: white; border-color: #0077ff; }
 .modal-actions button.primary:hover { background: #0066dd; }
+
+/* Fix for Sync and Send buttons wrapping */
+.actions .sync, .actions .send {
+  width: auto;
+  padding-right: 15px;
+  white-space: nowrap;
+}

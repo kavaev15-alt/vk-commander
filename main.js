@@ -1,3 +1,5 @@
+const API_BASE = window.location.port === "8000" ? "" : "http://localhost:8000";
+
 const data = [
   [
     "Городская кофейня «Маяк»",
@@ -263,7 +265,7 @@ document.querySelector(".send").onclick = async () => {
   if (updates.length === 0) return toast("Нет локальных изменений для отправки в VK");
 
   try {
-    const res = await fetch("/api/save", {
+    const res = await fetch(`${API_BASE}/api/save`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates)

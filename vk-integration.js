@@ -3,14 +3,14 @@ if (receiveButton) {
   receiveButton.title = "Подключить VK и загрузить данные сообществ";
   receiveButton.addEventListener("click", async () => {
     try {
-      const status = await fetch("/api/health").then((response) =>
+      const status = await fetch(`${API_BASE}/api/health`).then((response) =>
         response.json(),
       );
       if (!status.configured) {
         document.getElementById("configModal").classList.remove("hidden");
         return;
       }
-      window.location.assign("/auth/vk");
+      window.location.assign(`${API_BASE}/auth/vk`);
     } catch {
       showVkToast(
         "Не удалось связаться с локальным сервером. Запусти программу заново.",
@@ -29,7 +29,7 @@ document.getElementById("saveConfigModal").onclick = async () => {
   if (!appId || !appSecret) return showVkToast("Пожалуйста, заполните оба поля");
 
   try {
-    const res = await fetch("/api/config", {
+    const res = await fetch(`${API_BASE}/api/config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ app_id: appId, app_secret: appSecret })
@@ -38,7 +38,7 @@ document.getElementById("saveConfigModal").onclick = async () => {
     if (!res.ok) throw new Error(data.error);
 
     document.getElementById("configModal").classList.add("hidden");
-    window.location.assign("/auth/vk");
+    window.location.assign(`${API_BASE}/auth/vk`);
   } catch (e) {
     showVkToast("Ошибка сохранения: " + e.message);
   }
@@ -52,7 +52,7 @@ function showVkToast(message) {
 }
 
 async function loadVkGroups() {
-  const response = await fetch("/api/groups");
+  const response = await fetch(`${API_BASE}/api/groups`);
   const result = await response.json();
   if (!response.ok)
     throw new Error(result.error || "Не удалось получить сообщества");
@@ -86,7 +86,7 @@ async function loadVkGroups() {
   showVkToast(`Загружено сообществ: ${groups.length}`);
 }
 
-fetch("/api/health")
+fetch(`${API_BASE}/api/health`)
   .then((response) => (response.ok ? response.json() : null))
   .then(async (status) => {
     if (!status?.connected || !location.search.includes("connected=1")) return;
