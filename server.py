@@ -114,7 +114,7 @@ class Handler(SimpleHTTPRequestHandler):
             sessions[state] = {"state": state}
             params = {"client_id": APP_ID, "redirect_uri": REDIRECT_URI, "display": "page", "scope": "groups,offline", "response_type": "code", "state": state, "v": API_VERSION}
             self.send_response(302)
-            self.send_header("Location", "https://oauth.vk.com/authorize?" + urlencode(params))
+            self.send_header("Location", "https://id.vk.ru/authorize?" + urlencode(params))
             self.send_header("Set-Cookie", f"vk_commander_session={state}; HttpOnly; SameSite=Lax")
             self.end_headers()
             return
@@ -126,8 +126,8 @@ class Handler(SimpleHTTPRequestHandler):
             if "error" in query:
                 return self.send_json(400, {"error": query.get("error_description", ["VK authorization was cancelled"])[0]})
             try:
-                payload = urlencode({"client_id": APP_ID, "client_secret": APP_SECRET, "redirect_uri": REDIRECT_URI, "code": query["code"][0]}).encode()
-                request = Request("https://oauth.vk.com/access_token", data=payload, method="POST")
+                payload = urlencode({"client_id": APP_ID, "client_secret": APP_SECRET, "grant_type": "authorization_code", "redirect_uri": REDIRECT_URI, "code": query["code"][0]}).encode()
+                request = Request("https://id.vk.ru/oauth2/auth", data=payload, method="POST")
                 with urlopen(request, timeout=15) as response:
                     token_data = json.loads(response.read())
                 if "error" in token_data:
