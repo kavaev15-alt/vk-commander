@@ -41,7 +41,7 @@ sessions = {}
 
 def vk_request(method, params):
     query = urlencode({**params, "v": API_VERSION})
-    with urlopen(f"https://api.vk.com/method/{method}?{query}", timeout=15) as response:
+    with urlopen(f"https://api.vk.ru/method/{method}?{query}", timeout=15) as response:
         result = json.loads(response.read())
     if "error" in result:
         raise RuntimeError(result["error"].get("error_msg", "VK API error"))
