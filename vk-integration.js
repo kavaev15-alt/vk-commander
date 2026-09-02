@@ -2,19 +2,26 @@ const receiveButton = document.querySelector(".sync");
 if (receiveButton) {
   receiveButton.title = "Подключить VK и загрузить данные сообществ";
   receiveButton.addEventListener("click", async () => {
+    let isConfigured = false;
     try {
       const status = await fetch(`${API_BASE}/api/health`).then((response) =>
         response.json(),
       );
-      if (!status.configured) {
-        document.getElementById("configModal").classList.remove("hidden");
-        return;
-      }
+      isConfigured = status.configured;
+    } catch {
+      // Если сервер не запущен, всё равно показываем окно настроек
+      isConfigured = false;
+    }
+
+    if (!isConfigured) {
+      document.getElementById("configModal").classList.remove("hidden");
+      return;
+    }
+
+    try {
       window.location.assign(`${API_BASE}/auth/vk`);
     } catch {
-      showVkToast(
-        "Не удалось связаться с локальным сервером. Запусти программу заново.",
-      );
+      showVkToast("Не удалось запустить авторизацию.");
     }
   });
 }
@@ -40,7 +47,7 @@ document.getElementById("saveConfigModal").onclick = async () => {
     document.getElementById("configModal").classList.add("hidden");
     window.location.assign(`${API_BASE}/auth/vk`);
   } catch (e) {
-    showVkToast("Ошибка сохранения: " + e.message);
+    showVkToast("Не удалось подключиться. Убедитесь, что сервер запущен (кликните 'Запустить VK Commander.command')");
   }
 };
 
